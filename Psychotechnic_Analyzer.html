@@ -1,0 +1,1969 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Pilotest – Smart Coach (v5.18)</title>
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/fr.js"></script>
+
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-light: #818cf8;
+      --bg-body: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-sidebar: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #0ea5e9;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      --radius: 16px;
+      --font-main: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg-body: #0f172a;
+      --bg-card: #1e293b;
+      --bg-sidebar: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.08);
+      --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    }
+
+    * { box-sizing: border-box; transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease; }
+    body { margin: 0; font-family: var(--font-main); background: var(--bg-body); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; }
+
+    /* LAYOUT */
+    .app-shell { display: flex; width: 100%; height: 100%; }
+    
+    /* SIDEBAR */
+    .sidebar { width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border); padding: 24px; display: flex; flex-direction: column; z-index: 20; }
+    .brand { font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 10px; color: var(--primary); margin-bottom: 40px; }
+    .nav-links { list-style: none; padding: 0; margin: 0; flex: 1; }
+    .nav-item { margin-bottom: 8px; }
+    .nav-btn { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; color: var(--text-muted); text-decoration: none; font-weight: 600; cursor: pointer; border: 1px solid transparent; }
+    .nav-btn:hover { background: rgba(79, 70, 229, 0.05); color: var(--primary); }
+    .nav-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); }
+    .nav-btn i { font-size: 20px; }
+
+    /* MAIN CONTENT */
+    .main-content { flex: 1; overflow-y: auto; padding: 30px; position: relative; scroll-behavior: smooth; }
+    .header-mobile { display: none; } 
+    
+    /* SECTION ANIMATIONS */
+    .section { display: none; animation: fadeIn 0.4s ease-out; }
+    .section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* COMPONENTS */
+    h1, h2, h3 { margin: 0 0 15px 0; }
+    h1 { font-size: 28px; font-weight: 700; margin-bottom: 25px; }
+
+    .card { background: var(--bg-card); border-radius: var(--radius); padding: 24px; border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 24px; position: relative; }
+    
+    .btn { cursor: pointer; border: none; padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; font-family: var(--font-main); }
+    .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(79, 70, 229, 0.3); }
+    .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: rgba(0,0,0,0.03); color: var(--text-main); border-color: var(--text-muted); }
+    .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+    .btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
+    
+    /* INPUTS */
+    .form-group { margin-bottom: 15px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+    input, select, textarea { width: 100%; background: var(--bg-body); border: 1px solid var(--border); padding: 12px; border-radius: 10px; color: var(--text-main); outline: none; font-family: var(--font-main); font-size: 14px; transition: 0.2s; }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+    textarea { resize: vertical; min-height: 120px; line-height: 1.5; }
+
+    /* DASHBOARD GRID */
+    .grid-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 25px; }
+    .bento-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 25px; }
+    .bento-col { display: flex; flex-direction: column; gap: 20px; }
+    .kpi-card { background: var(--bg-card); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); display: flex; flex-direction: column; position: relative; overflow: hidden; }
+    .kpi-icon { width: 40px; height: 40px; border-radius: 10px; background: rgba(79, 70, 229, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 12px; }
+    .kpi-val { font-size: 32px; font-weight: 800; color: var(--text-main); }
+    .kpi-label { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* COACH AI CARD */
+    .card-coach { background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); color: white; border: none; }
+    .card-coach .kpi-label { color: rgba(255,255,255,0.7); }
+    .card-coach .kpi-val { color: white; font-size: 20px; line-height: 1.4; margin: 10px 0; font-weight: 600; }
+    .card-coach button { background: white; color: var(--primary); border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+
+    /* QUICK ADD FORM (INLINE) */
+    .quick-add-grid { display: grid; grid-template-columns: 1fr 2fr 1fr 1fr auto; gap: 12px; align-items: end; background: var(--bg-card); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 25px; }
+    
+    /* TABLES */
+    .table-container { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--bg-card); }
+    th { text-align: left; padding: 16px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; background: var(--bg-body); }
+    td { padding: 14px 16px; border-bottom: 1px solid var(--border); color: var(--text-main); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(0,0,0,0.02); }
+    
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .badge-gray { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); }
+    .badge-primary { background: rgba(79, 70, 229, 0.15); color: var(--primary); }
+
+    /* PROGRESS BAR ETA */
+    .eta-bar-bg { width: 100%; background: var(--bg-body); height: 10px; border-radius: 5px; overflow: hidden; position: relative; margin-top: 5px; border: 1px solid var(--border); }
+    .eta-bar-fill { height: 100%; background: var(--primary); border-radius: 5px; transition: width 0.5s ease; }
+
+    /* FULLSCREEN MODIFIERS */
+    .card.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; margin: 0; border-radius: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .card.fullscreen #squareDistribution { flex: 1; height: auto !important; min-height: 0; }
+    .card.fullscreen #squareLegend { max-height: 200px; overflow-y: auto; }
+
+    /* ASTUCES CARDS & MODAL */
+    .astuce-card { transition: transform 0.2s, border-color 0.2s; cursor: pointer; display: flex; flex-direction: column; height: 100%; border-left: 3px solid var(--warning); }
+    .astuce-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); border-color: var(--primary); }
+    .astuce-preview { font-size: 14px; color: var(--text-muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; flex-grow: 1; margin-top: 10px; }
+    
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px; opacity: 0; transition: opacity 0.3s ease; }
+    .modal-overlay.active { display: flex; opacity: 1; }
+    .modal-content { background: var(--bg-card); border-radius: var(--radius); padding: 35px; width: 100%; max-width: 650px; max-height: 85vh; overflow-y: auto; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); border: 1px solid var(--border); transform: scale(0.95); transition: transform 0.3s ease; }
+    .modal-overlay.active .modal-content { transform: scale(1); }
+    .modal-close { position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+    .modal-close:hover { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+    /* MOBILE ADAPTATION */
+    @media (max-width: 768px) {
+      .app-shell { flex-direction: column; }
+      .sidebar { position: fixed; bottom: 0; left: 0; width: 100%; height: auto; border-right: none; border-top: 1px solid var(--border); flex-direction: row; padding: 10px 10px; justify-content: space-between; background: var(--bg-card); box-shadow: 0 -4px 20px rgba(0,0,0,0.1); }
+      .brand { display: none; }
+      .nav-links { display: flex; justify-content: space-around; width: 100%; }
+      .nav-item { margin: 0; }
+      .nav-btn { flex-direction: column; gap: 4px; padding: 6px; font-size: 10px; border-radius: 8px; text-align: center; min-width: 60px;}
+      .nav-btn i { font-size: 20px; }
+      .nav-text { font-size: 10px; }
+      
+      .main-content { padding: 20px 15px 100px 15px; }
+      .header-mobile { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+      .header-mobile h1 { font-size: 20px; margin: 0; color: var(--text-main); }
+      
+      .grid-dashboard, .bento-grid, .quick-add-grid { grid-template-columns: 1fr; }
+      .desktop-only { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+  <!-- SIDEBAR NAVIGATION -->
+  <nav class="sidebar">
+    <div class="brand">
+      <i class="ph-fill ph-brain"></i> Pilotest
+    </div>
+    <ul class="nav-links">
+      <li class="nav-item">
+        <a onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn active">
+          <i class="ph ph-squares-four"></i> <span class="nav-text">Dashboard</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn">
+          <i class="ph ph-chart-line-up"></i> <span class="nav-text">Analyses</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a onclick="switchTab('astuces')" id="nav-astuces" class="nav-btn">
+          <i class="ph ph-lightbulb"></i> <span class="nav-text">Astuces</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a onclick="switchTab('history')" id="nav-history" class="nav-btn">
+          <i class="ph ph-clock-counter-clockwise"></i> <span class="nav-text">Historique</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a onclick="switchTab('settings')" id="nav-settings" class="nav-btn">
+          <i class="ph ph-gear"></i> <span class="nav-text">Réglages</span>
+        </a>
+      </li>
+    </ul>
+    
+    <div style="margin-top:auto" class="desktop-only">
+      <button id="themeToggle" class="btn btn-ghost" style="width:100%">
+        <i class="ph ph-moon"></i> Mode sombre
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+    
+    <!-- HEADER MOBILE -->
+    <div class="header-mobile">
+      <h1>Dashboard</h1>
+      <button onclick="toggleTheme()" class="btn btn-ghost" style="padding: 8px;">
+        <i class="ph ph-moon" style="font-size: 20px;"></i>
+      </button>
+    </div>
+
+    <!-- VIEW: DASHBOARD -->
+    <div id="view-dashboard" class="section active">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 25px;">
+        <h1 style="margin: 0;" class="desktop-only">Vue d'ensemble</h1>
+        <div class="desktop-only text-muted" id="currentDateDisplay"></div>
+      </div>
+
+      <!-- INDICATEURS PSY 0 / PSY 1 -->
+      <div id="psyIndicatorContainer" style="display: none; margin-bottom: 25px;">
+          <!-- Injecté en JS -->
+      </div>
+
+      <!-- Quick Add Form -->
+      <div class="quick-add-grid">
+        <div>
+          <label class="form-label">Date</label>
+          <input type="date" id="inputDate">
+        </div>
+        <div>
+           <label class="form-label">Test</label>
+           <input type="text" id="inputTest" list="testSuggestions" placeholder="Ex: Cubes, Attention...">
+           <datalist id="testSuggestions"></datalist>
+        </div>
+        <div>
+           <label class="form-label">Score (%)</label>
+           <input type="number" id="inputScore" placeholder="0-100">
+        </div>
+        <div>
+           <label class="form-label">Stanine</label>
+           <input type="number" id="inputStanine" placeholder="1-9">
+        </div>
+        <button onclick="addManualEntry()" class="btn btn-primary" style="height: 44px; margin-top: auto;">
+          <i class="ph-bold ph-plus"></i> <span class="desktop-only">Ajouter</span>
+        </button>
+      </div>
+
+      <!-- KPIs -->
+      <div class="grid-dashboard">
+        <div class="kpi-card">
+          <div class="kpi-icon"><i class="ph ph-files"></i></div>
+          <div class="kpi-val" id="kpiTotal">0</div>
+          <div class="kpi-label">Tests Réalisés</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon"><i class="ph ph-trend-up"></i></div>
+          <div class="kpi-val" id="kpiGlobalAvg">0%</div>
+          <div class="kpi-label">Moyenne Globale</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="color:var(--danger); background:rgba(239,68,68,0.1)"><i class="ph ph-fire"></i></div>
+          <div class="kpi-val" id="kpiStreak">0</div>
+          <div class="kpi-label">Jours Consécutifs (Série)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="color:var(--warning); background:rgba(245,158,11,0.1)"><i class="ph ph-target"></i></div>
+          <div class="kpi-val" id="kpiUnique">0</div>
+          <div class="kpi-label">Types de Tests</div>
+        </div>
+      </div>
+
+      <!-- LÉGENDE GLOBALE DES COULEURS (STANINES) -->
+      <div class="card" style="padding: 15px 20px; margin-bottom: 25px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Échelle des Niveaux (Stanines)</div>
+            <div style="font-size: 11px; color: var(--text-muted);" class="desktop-only">Couleurs de référence utilisées dans les graphiques</div>
+        </div>
+        <div style="display: flex; width: 100%; height: 28px; border-radius: 8px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="flex: 1; background: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;" title="Stanine 1">1</div>
+            <div style="flex: 1; background: #ea580c; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;" title="Stanine 2">2</div>
+            <div style="flex: 1; background: #f97316; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;" title="Stanine 3">3</div>
+            <div style="flex: 1; background: #eab308; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;" title="Stanine 4">4</div>
+            <div style="flex: 1; background: #fde047; color: #1e293b; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;" title="Stanine 5">5</div>
+            <div style="flex: 1; background: #84cc16; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;" title="Stanine 6">6</div>
+            <div style="flex: 1; background: #10b981; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;" title="Stanine 7">7</div>
+            <div style="flex: 1; background: #0ea5e9; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;" title="Stanine 8">8</div>
+            <div style="flex: 1; background: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;" title="Stanine 9">9</div>
+        </div>
+      </div>
+
+      <!-- BENTO GRID -->
+      <div class="bento-grid">
+        <div class="bento-col">
+          <div class="card" style="margin-bottom: 0; padding: 20px;">
+            <h3 style="font-size: 16px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+              <i class="ph-fill ph-trend-up" style="color: var(--primary)"></i> Évolution Globale (Moyenne)
+            </h3>
+            <div style="height: 220px;">
+              <canvas id="globalTrendChart"></canvas>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom: 0; padding: 20px;">
+            <h3 style="font-size: 16px; margin-bottom: 15px;">Moyenne par épreuve (Top 10)</h3>
+            <div style="height: 250px;">
+              <canvas id="avgBarChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="bento-col">
+          <div class="card card-coach" style="margin-bottom: 0; padding: 24px; border-radius: var(--radius);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div class="kpi-label" style="opacity:0.9">💡 Conseil IA</div>
+              <i class="ph-fill ph-robot" style="font-size:24px; opacity:0.8"></i>
+            </div>
+            <div id="coachRecommendation" style="font-size: 20px; font-weight: 700; margin: 15px 0 10px 0; line-height: 1.2;">Analyse en cours...</div>
+            <div id="coachReason" style="font-size: 13px; opacity: 0.9; margin-bottom: 15px; line-height: 1.4;">Importez des données pour commencer.</div>
+            <button onclick="goToAnalytics()" style="width: 100%; display: flex; justify-content: center; gap: 8px;">
+               <i class="ph-bold ph-arrow-right"></i> Voir l'analyse
+            </button>
+          </div>
+
+          <!-- DIAGRAMME EN MOSAÏQUE (TREEMAP) -->
+          <div class="card" id="treemapCard" style="margin-bottom: 0; padding: 20px; flex: 1; display: flex; flex-direction: column;">
+             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                 <h3 style="font-size: 16px; margin: 0;">Répartition (Volume de tests)</h3>
+                 <button class="btn btn-ghost" style="padding: 4px;" onclick="toggleFullscreen('treemapCard')" title="Plein écran">
+                     <i class="ph ph-arrows-out" id="treemapFullscreenIcon"></i>
+                 </button>
+             </div>
+             <div id="squareDistribution" style="position: relative; width: 100%; height: 220px; border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.05); border: 1px solid var(--border);"></div>
+             <div id="squareLegend" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; font-size: 11px; overflow-y: auto; flex: 1; align-content: flex-start; justify-content: center;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FREQUENCY BAR CHART WITH STANINE COLORS -->
+      <div class="card" style="margin-bottom: 25px; padding: 20px;">
+        <h3 style="font-size: 16px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+          <i class="ph-fill ph-chart-bar" style="color: var(--primary)"></i> Fréquence des tests & Niveau Actuel (Stanines)
+        </h3>
+        <div style="overflow-x: auto; border-radius: 8px; padding-bottom: 10px;">
+          <!-- Hauteur fixée à 400px -->
+          <div id="freqChartContainer" style="height: 400px; min-width: 100%;">
+            <canvas id="freqBarChart"></canvas>
+          </div>
+        </div>
+        <p class="text-muted" id="bottomChartSubtitle" style="font-size: 12px; margin-top: 10px; text-align: center;">
+          Ce graphique affiche <strong>tous vos tests</strong>. La couleur et le numéro indiquent votre <strong>Stanine Moyenne Vraie</strong>.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- VIEW: ANALYTICS -->
+    <div id="view-analytics" class="section">
+      <h1>Analyses Détaillées</h1>
+      
+      <div class="card">
+        <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap; margin-bottom:20px;">
+          <div style="flex:1">
+            <label class="form-label">Sélectionner un test</label>
+            <select id="testSelector"></select>
+          </div>
+        </div>
+
+        <div id="detailStats" style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px; padding:15px; background:var(--bg-body); border-radius:12px;">
+          <div style="flex:1; min-width:100px">
+            <div class="form-label" id="labelStatAvg">Moyenne</div>
+            <div style="font-size:24px; font-weight:700" id="statAvg">—</div>
+          </div>
+          <div style="flex:1; min-width:100px">
+            <div class="form-label">Record</div>
+            <div style="font-size:24px; font-weight:700; color:var(--success)" id="statMax">—</div>
+          </div>
+          <div style="flex:1; min-width:100px">
+            <div class="form-label">Stabilité</div>
+            <div style="font-size:24px; font-weight:700" id="statSD">—</div>
+          </div>
+          <div style="flex:1; min-width:100px">
+            <div class="form-label">Dernier</div>
+            <div style="font-size:24px; font-weight:700" id="statLast">—</div>
+          </div>
+        </div>
+
+        <!-- ETALONNAGE FEEDBACK -->
+        <div id="etalonnageFeedback" style="display:none; margin-bottom:30px; padding:20px; background: rgba(79, 70, 229, 0.05); border: 1px solid var(--primary); border-radius: 12px;">
+          <h3 style="font-size: 16px; margin-bottom: 15px; color: var(--primary); display: flex; align-items: center; gap: 8px;">
+            <i class="ph-fill ph-ranking"></i> Positionnement Actuel (Étalonnage)
+          </h3>
+          <div style="display:flex; gap: 20px; flex-wrap: wrap; align-items: center;">
+             <div style="flex:1; min-width:120px;">
+                <div class="text-muted text-sm">Niveau Actuel (Stanine vraie)</div>
+                <div id="etaAvgClass" style="font-size:20px; font-weight:700; color: var(--text-main);">—</div>
+             </div>
+             <div style="flex:1; min-width:120px;">
+                <div class="text-muted text-sm">Niveau Record</div>
+                <div id="etaMaxClass" style="font-size:20px; font-weight:700; color: var(--text-main);">—</div>
+             </div>
+             <div style="flex:2; min-width:200px;">
+                <div class="text-muted text-sm" style="margin-bottom: 8px;">Progression vers la classe supérieure (basé sur la moyenne)</div>
+                <div class="eta-bar-bg">
+                   <div id="etaProgress" class="eta-bar-fill" style="width: 0%;"></div>
+                </div>
+                <div id="etaNextTarget" class="text-muted text-sm" style="margin-top: 5px; text-align: right; font-weight: 600;">—</div>
+             </div>
+          </div>
+        </div>
+
+        <div class="grid-dashboard" style="grid-template-columns: 2fr 1fr; margin-bottom:0">
+          <div style="height:300px">
+            <canvas id="scoreChart"></canvas>
+          </div>
+          <div style="height:300px">
+            <canvas id="stanineChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: ASTUCES -->
+    <div id="view-astuces" class="section">
+      <h1>Fiches & Astuces</h1>
+      
+      <div class="card" style="border-left: 4px solid var(--warning);">
+        <h3 style="display:flex; align-items:center; gap:8px;"><i class="ph-fill ph-lightbulb" style="color:var(--warning)"></i> Rédiger une fiche</h3>
+        <p class="text-muted" style="margin-bottom:20px; font-size:14px;">Sélectionnez un exercice pour écrire ou modifier vos propres notes, moyens mnémotechniques et stratégies.</p>
+
+        <div class="form-group" style="max-width: 400px;">
+          <label class="form-label">Pour quel test ?</label>
+          <input type="text" id="astuceTest" list="testSuggestions" placeholder="Ex: Cubes, M2 Back..." onchange="loadAstuceForTest()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Vos notes et astuces</label>
+          <textarea id="astuceContent" placeholder="Ex: Faire attention aux formes inversées, prendre 2 secondes de pause entre chaque série..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="saveAstuce()" id="btnSaveAstuce">
+          <i class="ph-bold ph-floppy-disk"></i> Enregistrer la fiche
+        </button>
+      </div>
+
+      <div class="grid-dashboard" id="astucesContainer" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+        <!-- JS fills this -->
+      </div>
+    </div>
+
+    <!-- VIEW: HISTORY -->
+    <div id="view-history" class="section">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+        <h1>Historique complet</h1>
+        <div style="position:relative; width: 300px;">
+          <i class="ph-magnifying-glass" style="position:absolute; left:12px; top:12px; color:var(--text-muted)"></i>
+          <input type="text" id="tableSearch" placeholder="Rechercher un test..." style="padding-left:35px">
+        </div>
+      </div>
+      
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="table-container">
+          <table id="dataTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Test</th>
+                <th>Score</th>
+                <th>Trend</th>
+                <th>Stanine</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: SETTINGS -->
+    <div id="view-settings" class="section">
+      <h1>Réglages & Données</h1>
+
+      <!-- NIVEAU ACTUEL (LIMIT) -->
+      <div class="card" style="border-left: 4px solid var(--info);">
+        <h3 style="display:flex; align-items:center; gap:8px;"><i class="ph-fill ph-clock" style="color:var(--info)"></i> Fenêtre d'Analyse (Niveau Actuel)</h3>
+        <p class="text-muted" style="margin-bottom:20px; font-size:14px;">Calculez votre niveau (Stanine, Moyennes, conseils IA) uniquement sur vos dernières tentatives pour refléter votre niveau <strong>actuel</strong> (et non vos notes de débutants).</p>
+        
+        <div class="form-group" style="display: flex; gap: 10px; max-width: 400px; align-items: flex-end;">
+          <div style="flex:1">
+             <label class="form-label">Prendre en compte :</label>
+             <select id="recentLimitSelect">
+                <option value="0">Toutes les sessions (Historique complet)</option>
+                <option value="5">Les 5 dernières sessions</option>
+                <option value="10">Les 10 dernières sessions</option>
+                <option value="20">Les 20 dernières sessions</option>
+             </select>
+          </div>
+          <button class="btn btn-primary" onclick="saveRecentLimit()" id="btnSaveRecentLimit"><i class="ph-bold ph-floppy-disk"></i></button>
+        </div>
+      </div>
+
+      <!-- DATES PSY 0 / PSY 1 -->
+      <div class="card" style="border-left: 4px solid #8b5cf6;">
+        <h3 style="display:flex; align-items:center; gap:8px;"><i class="ph-fill ph-calendar" style="color:#8b5cf6"></i> Dates Sélections (PSY 0 / PSY 1)</h3>
+        <p class="text-muted" style="margin-bottom:20px; font-size:14px;">Indiquez les dates de vos épreuves pour afficher un compte à rebours sur le tableau de bord.</p>
+        
+        <div style="display:flex; gap:15px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:150px;">
+                <label class="form-label">Date PSY 0</label>
+                <input type="date" id="datePsy0">
+            </div>
+            <div style="flex:1; min-width:150px;">
+                <label class="form-label">Date PSY 1</label>
+                <input type="date" id="datePsy1">
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="savePsyDates()" id="btnSavePsyDates" style="margin-top:15px;">
+            <i class="ph-bold ph-floppy-disk"></i> Enregistrer les dates
+        </button>
+      </div>
+
+      <!-- CATEGORIES SETUP -->
+      <div class="card" style="border-left: 4px solid var(--success);">
+        <h3 style="display:flex; align-items:center; gap:8px;"><i class="ph-fill ph-list-plus" style="color:var(--success)"></i> Gérer les Catégories (Tests)</h3>
+        <p class="text-muted" style="margin-bottom:20px; font-size:14px;">Ajoutez manuellement le nom d'un test que vous n'avez pas encore passé. Il apparaîtra dans le graphique de répartition (en gris) et dans les listes.</p>
+        
+        <div class="form-group" style="display: flex; gap: 10px; max-width: 400px;">
+          <input type="text" id="newCategoryInput" placeholder="Nouveau test (ex: M2 Back...)">
+          <button class="btn btn-primary" onclick="addCustomCategory()"><i class="ph-bold ph-plus"></i></button>
+        </div>
+        
+        <div id="categoriesList" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px;">
+          <!-- JS fills this -->
+        </div>
+      </div>
+      
+      <div class="card" style="border-left: 4px solid var(--primary);">
+        <h3 style="display:flex; align-items:center; gap:8px;"><i class="ph-fill ph-crosshair" style="color:var(--primary)"></i> Étalonnage des Classes (Stanines)</h3>
+        <p class="text-muted" style="margin-bottom:20px; font-size:14px;">Pour chaque test, renseignez le score minimum (%) correspondant à chaque classe pour vous situer par rapport aux autres candidats et afficher les seuils sur vos graphiques.</p>
+        
+        <div class="form-group" style="max-width: 400px;">
+          <label class="form-label">Sélectionnez le test à étalonner</label>
+          <select id="etalonnageTest" onchange="loadEtalonnageForm()"></select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; margin-bottom: 20px;" id="etalonnageGrid">
+          <!-- JS fills this -->
+        </div>
+        <button class="btn btn-primary" onclick="saveEtalonnage()" id="btnSaveEta">
+          <i class="ph-bold ph-floppy-disk"></i> Enregistrer les seuils
+        </button>
+      </div>
+
+      <!-- SAUVEGARDES GLOBALES -->
+      <div class="grid-dashboard" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+        <div class="card">
+          <h3><i class="ph-fill ph-database" style="color:var(--text-main)"></i> Scores (CSV)</h3>
+          <p class="text-muted" style="margin-bottom:20px; font-size:14px;">Importez vos données CSV (le système intègre un <strong>Super Réparateur</strong> pour lire les sauvegardes fusionnées et détruites par Excel).</p>
+          
+          <button id="btnImport" class="btn btn-primary" style="width:100%; justify-content:center; margin-bottom:10px;">
+             <i class="ph-bold ph-upload-simple"></i> Importer vos scores
+          </button>
+          <input type="file" id="csvFile" accept=".csv" style="display:none" />
+          
+          <button id="btnRestore" class="btn btn-ghost" style="width:100%; justify-content:center; margin-bottom:10px; color: var(--warning); border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.05); display: none;">
+             <i class="ph-bold ph-arrow-u-up-left"></i> Annuler le dernier import
+          </button>
+          
+          <button id="btnExport" class="btn btn-ghost" style="width:100%; justify-content:center">
+             <i class="ph-bold ph-download-simple"></i> Exporter en CSV
+          </button>
+          <div id="importLog" style="margin-top:10px; font-size:13px; color:var(--text-muted); line-height:1.5;"></div>
+        </div>
+
+        <div class="card">
+          <h3><i class="ph-fill ph-sliders" style="color:var(--text-main)"></i> Paramètres (JSON)</h3>
+          <p class="text-muted" style="margin-bottom:20px; font-size:14px;">Sauvegardez ou restaurez l'intégralité de vos réglages (Étalo., fiches d'astuces, catégories personnalisées, dates PSY).</p>
+          
+          <button id="btnImportSettings" class="btn btn-primary" style="width:100%; justify-content:center; margin-bottom:10px;">
+             <i class="ph-bold ph-upload-simple"></i> Importer paramètres
+          </button>
+          <input type="file" id="jsonFile" accept=".json" style="display:none" />
+          
+          <button id="btnExportSettings" class="btn btn-ghost" style="width:100%; justify-content:center">
+             <i class="ph-bold ph-download-simple"></i> Exporter paramètres
+          </button>
+          <div id="importSettingsLog" style="margin-top:10px; font-size:13px; color:var(--text-muted); line-height:1.5;"></div>
+        </div>
+
+        <div class="card">
+          <h3><i class="ph-fill ph-warning" style="color:var(--danger)"></i> Zone de Danger</h3>
+          <p class="text-muted" style="margin-bottom:20px; font-size:14px;">Attention, ces actions suppriment vos données de l'ordinateur.</p>
+          <button id="btnReset" class="btn btn-danger" style="width:100%; justify-content:center">
+             <i class="ph-bold ph-trash"></i> Tout effacer
+          </button>
+        </div>
+      </div>
+      
+      <div class="text-center text-muted" style="text-align:center; font-size:12px; margin-top:20px;">
+        Pilotest Smart Coach v5.18 • Données stockées localement
+      </div>
+    </div>
+
+    <!-- MODAL ASTUCE -->
+    <div id="astuceModal" class="modal-overlay" onclick="if(event.target === this) closeAstuceModal()">
+      <div class="modal-content">
+        <button class="modal-close" onclick="closeAstuceModal()"><i class="ph ph-x"></i></button>
+        <h2 id="modalTitle" style="color:var(--text-main); display:flex; align-items:center; gap:10px; margin-bottom: 20px; font-size: 24px;">
+          <i class="ph-fill ph-lightbulb" style="color:var(--warning)"></i> <span id="modalTitleText"></span>
+        </h2>
+        <div id="modalContentText" style="white-space: pre-wrap; line-height: 1.7; font-size: 16px; color: var(--text-main);"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/**
+ * CONFIG & UTILS
+ */
+dayjs.extend(window.dayjs_plugin_customParseFormat);
+dayjs.locale('fr');
+
+const DB_KEY = 'pilotest_db_v4';
+const ETA_KEY = 'pilotest_etalonnage_v1';
+const ASTUCES_KEY = 'pilotest_astuces_v1';
+const BACKUP_KEY = 'pilotest_db_backup_v1';
+const CATEGORIES_KEY = 'pilotest_categories_v1';
+const PSY_DATES_KEY = 'pilotest_psy_dates_v1'; 
+const RECENT_LIMIT_KEY = 'pilotest_recent_limit_v1';
+
+let DB = [];
+let ETALONNAGE = {};
+let ASTUCES = {};
+let CATEGORIES = [];
+let chartInstances = {};
+let PSY_DATES = { psy0: '', psy1: '' }; 
+let RECENT_LIMIT = 0; // 0 = All
+
+/**
+ * INITIALIZATION & SANITIZATION
+ */
+function init() {
+  const storedDB = localStorage.getItem(DB_KEY);
+  if (storedDB) { 
+    try { 
+      let rawDB = JSON.parse(storedDB); 
+      DB = rawDB.filter(e => {
+          if (!e || !e.test || typeof e.test !== 'string') return false;
+          const testName = e.test.trim();
+          if (testName === '' || testName.length > 80) return false; 
+          if (typeof e.score !== 'number' || isNaN(e.score) || e.score < 0 || e.score > 100) return false;
+          return true;
+      });
+      if (DB.length !== rawDB.length) saveDB();
+    } catch (e) { DB=[]; } 
+  }
+  
+  const storedEta = localStorage.getItem(ETA_KEY);
+  if (storedEta) { try { ETALONNAGE = JSON.parse(storedEta); } catch (e) { ETALONNAGE={}; } }
+  
+  const storedAstuces = localStorage.getItem(ASTUCES_KEY);
+  if (storedAstuces) { try { ASTUCES = JSON.parse(storedAstuces); } catch (e) { ASTUCES={}; } }
+
+  const storedCat = localStorage.getItem(CATEGORIES_KEY);
+  if (storedCat) { try { CATEGORIES = JSON.parse(storedCat); } catch (e) { CATEGORIES=[]; } }
+
+  const storedLimit = localStorage.getItem(RECENT_LIMIT_KEY);
+  if (storedLimit) { RECENT_LIMIT = parseInt(storedLimit); }
+  document.getElementById('recentLimitSelect').value = RECENT_LIMIT;
+
+  const storedPsy = localStorage.getItem(PSY_DATES_KEY);
+  if (storedPsy) { try { PSY_DATES = JSON.parse(storedPsy); } catch (e) {} }
+  document.getElementById('datePsy0').value = PSY_DATES.psy0 || '';
+  document.getElementById('datePsy1').value = PSY_DATES.psy1 || '';
+
+  document.getElementById('inputDate').valueAsDate = new Date();
+  document.getElementById('currentDateDisplay').innerText = dayjs().format('DD MMMM YYYY');
+
+  document.getElementById('btnImport').onclick = () => document.getElementById('csvFile').click();
+  document.getElementById('btnRestore').onclick = restoreBackup;
+  document.getElementById('btnReset').onclick = resetDB;
+  document.getElementById('btnExport').onclick = exportCSV;
+  
+  // NOUVEAU: Import/Export des Paramètres
+  document.getElementById('btnImportSettings').onclick = () => document.getElementById('jsonFile').click();
+  document.getElementById('btnExportSettings').onclick = exportSettings;
+
+  document.getElementById('testSelector').onchange = updateDetailCharts;
+  document.getElementById('tableSearch').onkeyup = filterTable;
+  
+  document.getElementById('themeToggle').onclick = toggleTheme;
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeIcon(savedTheme);
+
+  checkBackupAvailability();
+  updateUI();
+  
+  window.addEventListener('resize', () => {
+     clearTimeout(window.resizeTimer);
+     window.resizeTimer = setTimeout(updateGlobalCharts, 200);
+  });
+}
+
+/**
+ * PARAMETERS EXPORT / IMPORT (JSON)
+ */
+function exportSettings() {
+    const config = {
+        etalonnage: ETALONNAGE,
+        astuces: ASTUCES,
+        categories: CATEGORIES,
+        psyDates: PSY_DATES,
+        recentLimit: RECENT_LIMIT
+    };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
+    const a = document.createElement("a");
+    a.setAttribute("href", dataStr);
+    a.setAttribute("download", `pilotest_parametres_${dayjs().format('YYYYMMDD')}.json`);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+document.getElementById('jsonFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        try {
+            const config = JSON.parse(evt.target.result);
+            
+            if (config.etalonnage) {
+                ETALONNAGE = config.etalonnage;
+                localStorage.setItem(ETA_KEY, JSON.stringify(ETALONNAGE));
+            }
+            if (config.astuces) {
+                ASTUCES = config.astuces;
+                localStorage.setItem(ASTUCES_KEY, JSON.stringify(ASTUCES));
+            }
+            if (config.categories) {
+                CATEGORIES = config.categories;
+                localStorage.setItem(CATEGORIES_KEY, JSON.stringify(CATEGORIES));
+            }
+            if (config.psyDates) {
+                PSY_DATES = config.psyDates;
+                localStorage.setItem(PSY_DATES_KEY, JSON.stringify(PSY_DATES));
+                document.getElementById('datePsy0').value = PSY_DATES.psy0 || '';
+                document.getElementById('datePsy1').value = PSY_DATES.psy1 || '';
+            }
+            if (config.recentLimit !== undefined) {
+                RECENT_LIMIT = config.recentLimit;
+                localStorage.setItem(RECENT_LIMIT_KEY, RECENT_LIMIT);
+                document.getElementById('recentLimitSelect').value = RECENT_LIMIT;
+            }
+            
+            updateUI();
+            document.getElementById('importSettingsLog').innerHTML = `<span style="color:var(--success)">Paramètres restaurés avec succès !</span>`;
+        } catch (err) {
+            document.getElementById('importSettingsLog').innerHTML = `<span style="color:var(--danger)">Erreur: Format de fichier invalide.</span>`;
+        }
+        document.getElementById('jsonFile').value = '';
+    };
+    reader.readAsText(file);
+});
+
+/**
+ * PSY DATES 
+ */
+window.savePsyDates = function() {
+    PSY_DATES.psy0 = document.getElementById('datePsy0').value;
+    PSY_DATES.psy1 = document.getElementById('datePsy1').value;
+    localStorage.setItem(PSY_DATES_KEY, JSON.stringify(PSY_DATES));
+
+    const btn = document.getElementById('btnSavePsyDates');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="ph-bold ph-check"></i> Sauvegardé';
+    btn.style.background = 'var(--success)';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 1500);
+
+    updatePsyIndicator();
+};
+
+function updatePsyIndicator() {
+    const container = document.getElementById('psyIndicatorContainer');
+    if (!PSY_DATES.psy0 && !PSY_DATES.psy1) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'flex';
+    container.style.flexWrap = 'wrap';
+    container.style.gap = '15px';
+    container.innerHTML = '';
+
+    const today = dayjs().startOf('day');
+
+    ['0', '1'].forEach(num => {
+        const dateStr = PSY_DATES[`psy${num}`];
+        if (dateStr) {
+            const d = dayjs(dateStr).startOf('day');
+            const diff = d.diff(today, 'day');
+            let statusHtml = '';
+            let color = 'var(--primary)';
+            let bg = 'rgba(79, 70, 229, 0.1)';
+
+            if (diff > 0) {
+                statusHtml = `J - ${diff}`;
+                if (diff <= 7) { color = 'var(--warning)'; bg = 'rgba(245, 158, 11, 0.1)'; }
+            } else if (diff === 0) {
+                statusHtml = "C'est aujourd'hui !";
+                color = 'var(--danger)'; bg = 'rgba(239, 68, 68, 0.1)';
+            } else {
+                statusHtml = "Terminé";
+                color = 'var(--success)'; bg = 'rgba(16, 185, 129, 0.1)';
+            }
+
+            container.innerHTML += `
+                <div style="flex:1; min-width: 250px; background: var(--bg-card); border: 1px solid var(--border); border-left: 4px solid ${color}; border-radius: var(--radius); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow);">
+                    <div>
+                        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Échéance PSY ${num}</div>
+                        <div style="font-size: 16px; font-weight: 700; color: var(--text-main); margin-top: 4px;">${d.format('D MMMM YYYY')}</div>
+                    </div>
+                    <div style="background: ${bg}; color: ${color}; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 16px;">
+                        ${statusHtml}
+                    </div>
+                </div>
+            `;
+        }
+    });
+}
+
+/**
+ * SAUVEGARDE & RESTAURATION
+ */
+function createBackup() {
+   localStorage.setItem(BACKUP_KEY, JSON.stringify(DB));
+   checkBackupAvailability();
+}
+
+function checkBackupAvailability() {
+   const btn = document.getElementById('btnRestore');
+   if(localStorage.getItem(BACKUP_KEY)) {
+       btn.style.display = 'flex';
+   } else {
+       btn.style.display = 'none';
+   }
+}
+
+function restoreBackup() {
+   if(confirm("Voulez-vous restaurer la base de données à son état précédent ? Cela annulera le dernier import CSV ou le dernier effacement.")) {
+       const bkp = localStorage.getItem(BACKUP_KEY);
+       if(bkp) {
+           DB = JSON.parse(bkp);
+           saveDB();
+           updateUI();
+           document.getElementById('importLog').innerHTML = `<span style="color:var(--success)">Sauvegarde restaurée avec succès !</span>`;
+       }
+   }
+}
+
+// Navigation Logic
+window.switchTab = function(tabId) {
+  document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-'+tabId).classList.add('active');
+  document.getElementById('nav-'+tabId).classList.add('active');
+  
+  if(tabId === 'dashboard') updateGlobalCharts();
+  if(tabId === 'analytics') updateDetailCharts();
+  
+  const viewTitles = { 'dashboard':'Dashboard', 'analytics':'Analyses', 'astuces':'Astuces', 'history':'Historique', 'settings':'Réglages' };
+  const mobileHeader = document.querySelector('.header-mobile h1');
+  if(mobileHeader) mobileHeader.innerText = viewTitles[tabId];
+}
+window.goToAnalytics = function() { switchTab('analytics'); }
+
+/**
+ * THEME, FULLSCREEN & SETTINGS
+ */
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  updateThemeIcon(next);
+  updateGlobalCharts();
+  updateDetailCharts();
+}
+
+function updateThemeIcon(theme) {
+  const icon = theme === 'dark' ? '<i class="ph ph-sun"></i> Mode clair' : '<i class="ph ph-moon"></i> Mode sombre';
+  const btn = document.getElementById('themeToggle');
+  if(btn) btn.innerHTML = icon;
+}
+
+function toggleFullscreen(cardId) {
+    const card = document.getElementById(cardId);
+    const icon = document.getElementById('treemapFullscreenIcon');
+    card.classList.toggle('fullscreen');
+    if(card.classList.contains('fullscreen')) {
+        icon.classList.replace('ph-arrows-out', 'ph-arrows-in');
+    } else {
+        icon.classList.replace('ph-arrows-in', 'ph-arrows-out');
+    }
+    setTimeout(updateGlobalCharts, 100);
+}
+
+function saveRecentLimit() {
+    const val = parseInt(document.getElementById('recentLimitSelect').value);
+    RECENT_LIMIT = isNaN(val) ? 0 : val;
+    localStorage.setItem(RECENT_LIMIT_KEY, RECENT_LIMIT);
+    
+    const btn = document.getElementById('btnSaveRecentLimit');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="ph-bold ph-check"></i>';
+    btn.style.background = 'var(--success)';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 1500);
+    
+    updateUI();
+}
+
+/**
+ * DATA CORE
+ */
+function saveDB() {
+  DB.sort((a, b) => new Date(b.date) - new Date(a.date));
+  localStorage.setItem(DB_KEY, JSON.stringify(DB));
+}
+
+window.addManualEntry = function() {
+  const dateVal = document.getElementById('inputDate').value;
+  const testVal = document.getElementById('inputTest').value.trim();
+  const scoreVal = parseFloat(document.getElementById('inputScore').value);
+  const stanineVal = parseInt(document.getElementById('inputStanine').value);
+  if (!testVal || isNaN(scoreVal)) { alert("Nom et score requis."); return; }
+  const entry = {
+    id: `${testVal}_${new Date().getTime()}_man`,
+    test: testVal, score: scoreVal,
+    stanine: isNaN(stanineVal) ? null : stanineVal,
+    date: dateVal ? new Date(dateVal).toISOString() : new Date().toISOString()
+  };
+  DB.push(entry); saveDB(); updateUI();
+  
+  const btn = document.querySelector('.quick-add-grid .btn-primary');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<i class="ph-bold ph-check"></i> Ajouté';
+  btn.style.background = 'var(--success)';
+  setTimeout(() => { 
+    btn.innerHTML = originalText; btn.style.background = '';
+    document.getElementById('inputTest').value = '';
+    document.getElementById('inputScore').value = '';
+    document.getElementById('inputStanine').value = '';
+  }, 1500);
+}
+
+function deleteEntry(id) {
+  if(confirm('Supprimer cette entrée ?')) {
+    createBackup();
+    DB = DB.filter(e => e.id !== id);
+    saveDB();
+    updateUI();
+  }
+}
+
+function resetDB() {
+  if (confirm("Tout effacer ? (Cela supprimera vos scores, vos étalonnages, catégories et vos astuces). Action irréversible.")) {
+    createBackup();
+    DB = []; localStorage.removeItem(DB_KEY); 
+    ETALONNAGE = {}; localStorage.removeItem(ETA_KEY); 
+    ASTUCES = {}; localStorage.removeItem(ASTUCES_KEY);
+    CATEGORIES = []; localStorage.removeItem(CATEGORIES_KEY);
+    PSY_DATES = { psy0: '', psy1: '' }; localStorage.removeItem(PSY_DATES_KEY);
+    updateUI();
+  }
+}
+
+/**
+ * CATEGORY MANAGEMENT 
+ */
+window.addCustomCategory = function() {
+    const val = document.getElementById('newCategoryInput').value.trim();
+    if(!val) return;
+    if(!CATEGORIES.includes(val)) {
+        CATEGORIES.push(val);
+        localStorage.setItem(CATEGORIES_KEY, JSON.stringify(CATEGORIES));
+        document.getElementById('newCategoryInput').value = '';
+        updateUI();
+    }
+};
+
+window.removeCustomCategory = function(cat) {
+    if(confirm(`Enlever "${cat}" de la liste des tests personnalisés ? (Ne supprime pas l'historique associé s'il en existe)`)) {
+        CATEGORIES = CATEGORIES.filter(c => c !== cat);
+        localStorage.setItem(CATEGORIES_KEY, JSON.stringify(CATEGORIES));
+        updateUI();
+    }
+};
+
+function renderCategories() {
+    const container = document.getElementById('categoriesList');
+    if(!container) return;
+    container.innerHTML = '';
+    CATEGORIES.forEach(c => {
+        container.innerHTML += `
+            <div style="background: var(--bg-body); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                ${c}
+                <i class="ph-bold ph-x" style="cursor:pointer; color:var(--danger);" onclick="removeCustomCategory('${c}')"></i>
+            </div>
+        `;
+    });
+}
+
+/**
+ * ASTUCES
+ */
+function loadAstuceForTest() {
+  const t = document.getElementById('astuceTest').value.trim();
+  const content = document.getElementById('astuceContent');
+  if (ASTUCES[t]) {
+    content.value = ASTUCES[t];
+  } else {
+    content.value = '';
+  }
+}
+
+function saveAstuce() {
+  const t = document.getElementById('astuceTest').value.trim();
+  const content = document.getElementById('astuceContent').value.trim();
+  if (!t) { alert("Veuillez renseigner le nom de l'épreuve."); return; }
+  if (content === '') { delete ASTUCES[t]; } else { ASTUCES[t] = content; }
+  
+  localStorage.setItem(ASTUCES_KEY, JSON.stringify(ASTUCES));
+  
+  const btn = document.getElementById('btnSaveAstuce');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<i class="ph-bold ph-check"></i> Enregistré';
+  btn.style.background = 'var(--success)';
+  setTimeout(() => { btn.innerHTML = originalText; btn.style.background = ''; }, 1500);
+  renderAstuces();
+}
+
+function editAstuce(testName) {
+  document.getElementById('astuceTest').value = testName;
+  document.getElementById('astuceContent').value = ASTUCES[testName] || '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function deleteAstuce(testName) {
+  if (confirm(`Supprimer définitivement la fiche pour "${testName}" ?`)) {
+    delete ASTUCES[testName];
+    localStorage.setItem(ASTUCES_KEY, JSON.stringify(ASTUCES));
+    if (document.getElementById('astuceTest').value === testName) {
+      document.getElementById('astuceTest').value = '';
+      document.getElementById('astuceContent').value = '';
+    }
+    renderAstuces();
+  }
+}
+
+function openAstuceModal(title, content) {
+  document.getElementById('modalTitleText').innerText = title;
+  document.getElementById('modalContentText').innerText = content;
+  const modal = document.getElementById('astuceModal');
+  modal.style.display = 'flex';
+  setTimeout(() => modal.classList.add('active'), 10);
+}
+
+function closeAstuceModal() {
+  const modal = document.getElementById('astuceModal');
+  modal.classList.remove('active');
+  setTimeout(() => modal.style.display = 'none', 300);
+}
+
+function renderAstuces() {
+  const container = document.getElementById('astucesContainer');
+  if(!container) return;
+  container.innerHTML = '';
+  
+  const tests = Object.keys(ASTUCES).sort();
+  if (tests.length === 0) {
+    container.innerHTML = '<div class="text-muted" style="grid-column: 1/-1;">Aucune fiche astuce enregistrée pour le moment. Créez-en une ci-dessus !</div>';
+    return;
+  }
+  
+  tests.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'card astuce-card';
+    card.style.marginBottom = '0';
+    card.onclick = () => openAstuceModal(t, ASTUCES[t]);
+    
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'flex-start';
+    
+    const title = document.createElement('h4');
+    title.style.margin = '0';
+    title.style.color = 'var(--text-main)';
+    title.style.fontSize = '16px';
+    title.innerText = t;
+    
+    const actions = document.createElement('div');
+    actions.style.display = 'flex';
+    actions.style.gap = '5px';
+    
+    const btnEdit = document.createElement('button');
+    btnEdit.className = 'btn btn-ghost';
+    btnEdit.style.padding = '6px';
+    btnEdit.title = 'Modifier';
+    btnEdit.innerHTML = '<i class="ph ph-pencil-simple"></i>';
+    btnEdit.onclick = (e) => { e.stopPropagation(); editAstuce(t); }; 
+    
+    const btnDel = document.createElement('button');
+    btnDel.className = 'btn btn-ghost';
+    btnDel.style.padding = '6px';
+    btnDel.style.color = 'var(--danger)';
+    btnDel.title = 'Supprimer';
+    btnDel.innerHTML = '<i class="ph ph-trash"></i>';
+    btnDel.onclick = (e) => { e.stopPropagation(); deleteAstuce(t); }; 
+    
+    actions.appendChild(btnEdit);
+    actions.appendChild(btnDel);
+    header.appendChild(title);
+    header.appendChild(actions);
+    
+    const content = document.createElement('div');
+    content.className = 'astuce-preview';
+    content.innerText = ASTUCES[t];
+    
+    card.appendChild(header);
+    card.appendChild(content);
+    container.appendChild(card);
+  });
+}
+
+/**
+ * ETALONNAGE
+ */
+function updateEtalonnageSelect() {
+  const uniq = [...new Set([...DB.map(e => e.test), ...CATEGORIES])].sort();
+  const sel = document.getElementById('etalonnageTest');
+  if(!sel) return;
+  const old = sel.value;
+  sel.innerHTML = '<option value="">-- Sélectionnez un test --</option>';
+  uniq.forEach(t => {
+    const o = document.createElement('option'); o.value = t; o.innerText = t; sel.appendChild(o);
+  });
+  if (old && uniq.includes(old)) {
+      sel.value = old;
+  } else if (uniq.length > 0) {
+      sel.value = uniq[0];
+  }
+  loadEtalonnageForm();
+}
+
+function loadEtalonnageForm() {
+  const t = document.getElementById('etalonnageTest').value;
+  const grid = document.getElementById('etalonnageGrid');
+  grid.innerHTML = '';
+  if(!t) return;
+
+  const data = ETALONNAGE[t] || {};
+  for(let i=1; i<=9; i++) {
+     grid.innerHTML += `
+       <div>
+         <label class="form-label" style="font-size:11px">Cl. ${i} min</label>
+         <input type="number" id="eta_c${i}" value="${data[i] !== undefined ? data[i] : ''}" placeholder="%" style="padding: 8px;">
+       </div>
+     `;
+  }
+}
+
+function saveEtalonnage() {
+  const t = document.getElementById('etalonnageTest').value;
+  if(!t) return alert('Sélectionnez un test d\'abord.');
+  
+  const data = {};
+  for(let i=1; i<=9; i++) {
+    const val = parseFloat(document.getElementById(`eta_c${i}`).value);
+    if(!isNaN(val)) data[i] = val;
+  }
+  
+  ETALONNAGE[t] = data;
+  localStorage.setItem(ETA_KEY, JSON.stringify(ETALONNAGE));
+  
+  const btn = document.getElementById('btnSaveEta');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<i class="ph-bold ph-check"></i> Sauvegardé';
+  btn.style.background = 'var(--success)';
+  setTimeout(() => { btn.innerHTML = originalText; btn.style.background = ''; }, 1500);
+  
+  updateDetailCharts();
+}
+
+function getClassForScore(score, thresholds) {
+   for(let i=9; i>=1; i--) {
+      if (thresholds[i] !== undefined && score >= thresholds[i]) return i;
+   }
+   if(Object.keys(thresholds).length > 0) return "< 1"; 
+   return null;
+}
+
+/**
+ * IMPORT / EXPORT (SUPER EXTRACTEUR)
+ */
+function parseFrenchDateRobust(str) {
+  if (!str) return null;
+  let clean = str.toLowerCase().replace(/[\u200B-\u200D\uFEFF\xA0]/g, ' ').trim();
+  clean = clean.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  const regex = /(\d{1,2})\s+([^\s\d]+)\s+(\d{4})(?:\s*(?:a\s*)?(\d{1,2})[h:](\d{2})(?:[m:]\d{2})?)?/;
+  const match = clean.match(regex);
+  
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const monthStr = match[2];
+    const year = parseInt(match[3], 10);
+    
+    let m = -1;
+    if (monthStr.includes('jan')) m = 0;
+    else if (monthStr.includes('fev') || monthStr.includes('fã©v') || monthStr.includes('fÃ©v')) m = 1;
+    else if (monthStr.includes('mar')) m = 2;
+    else if (monthStr.includes('avr')) m = 3;
+    else if (monthStr.includes('mai')) m = 4;
+    else if (monthStr.includes('juin')) m = 5;
+    else if (monthStr.includes('juil')) m = 6;
+    else if (monthStr.includes('aou') || monthStr.includes('aoã') || monthStr.includes('aoÃ')) m = 7;
+    else if (monthStr.includes('sep')) m = 8;
+    else if (monthStr.includes('oct')) m = 9;
+    else if (monthStr.includes('nov')) m = 10;
+    else if (monthStr.includes('dec') || monthStr.includes('dã©c') || monthStr.includes('dÃ©c')) m = 11;
+    
+    if (m !== -1) {
+      const hour = match[4] ? parseInt(match[4], 10) : 12;
+      const minute = match[5] ? parseInt(match[5], 10) : 0;
+      return new Date(year, m, day, hour, minute);
+    }
+  }
+  
+  const formats = ['DD/MM/YYYY HH:mm:ss', 'DD/MM/YYYY HH:mm', 'DD/MM/YYYY HH[h]mm', 'DD/MM/YYYY', 'YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm', 'YYYY-MM-DD'];
+  for (let f of formats) {
+     let d = dayjs(str.trim(), f);
+     if (d.isValid() && d.year() > 2000 && d.year() < 2100) return d.toDate();
+  }
+  
+  let nativeDate = new Date(str.trim());
+  if (!isNaN(nativeDate.getTime()) && nativeDate.getFullYear() > 2000) return nativeDate;
+  return null;
+}
+
+document.getElementById('csvFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        createBackup();
+        const text = evt.target.result;
+        const lines = text.split('\n');
+        let added = 0; let failedDates = 0; let ignored = 0; let rescued = 0;
+
+        function addIfUnique(test, score, stanine, date) {
+            test = String(test).replace(/\t/g, '').replace(/\s+/g, ' ').trim().replace(/Ãª/g, 'ê').replace(/Ã©/g, 'é');
+            if (test === '' || test.length > 80) return false;
+            if (isNaN(score) || score < 0 || score > 100) return false;
+            const id = `${test}_${date.getTime()}_${score}`;
+            if (!DB.some(e => e.id === id)) { 
+                DB.push({ id, test, score, stanine, date: date.toISOString() }); 
+                return true;
+            }
+            return false;
+        }
+
+        lines.forEach(line => {
+            line = line.trim();
+            if (!line || line === '' || line.toLowerCase().startsWith('id,test') || line.toLowerCase().startsWith('test,score')) return;
+            let cleanLine = line;
+            if (cleanLine.startsWith('"') && cleanLine.endsWith('"')) {
+                cleanLine = cleanLine.substring(1, cleanLine.length - 1).replace(/""/g, '"');
+            }
+            let matched = false;
+            const bugRegex = /^([^,]+?)\s*,\s*(\d+(?:[.,]\d+)?)%?\s*,\s*(\d*)\s*,\s*((?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)?\s*\d{1,2}\s+[^\s\d]+\s+\d{4}\s+\d{1,2}[h:]\d{2})_/;
+            const bugMatch = cleanLine.match(bugRegex);
+            if (bugMatch) {
+                let date = parseFrenchDateRobust(bugMatch[4]);
+                if (date) { if (addIfUnique(bugMatch[1], parseFloat(bugMatch[2].replace(',', '.')), parseInt(bugMatch[3]) || null, date)) rescued++; matched = true; } 
+                else failedDates++;
+            }
+            if(matched) return;
+            const origRegex = /^([^,]+?)\s*,\s*(\d+(?:[.,]\d+)?)%?\s*,\s*(\d*)\s*,\s*((?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)?\s*\d{1,2}\s+[^\s\d]+\s+\d{4}\s+\d{1,2}[h:]\d{2})$/;
+            const origMatch = cleanLine.match(origRegex);
+            if (origMatch) {
+                let date = parseFrenchDateRobust(origMatch[4]);
+                if (date) { if (addIfUnique(origMatch[1], parseFloat(origMatch[2].replace(',', '.')), parseInt(origMatch[3]) || null, date)) added++; matched = true; } 
+                else failedDates++;
+            }
+            if(matched) return;
+            const parsed = Papa.parse(cleanLine, {header: false}).data[0];
+            if (parsed) {
+                let t, s, st, dStr;
+                if (parsed.length >= 5) { t = parsed[1]; s = parsed[2]; st = parsed[3]; dStr = parsed.slice(4).join(','); } 
+                else if (parsed.length === 4) { t = parsed[0]; s = parsed[1]; st = parsed[2]; dStr = parsed[3]; }
+                if (t && s !== undefined && dStr) {
+                    let score = parseFloat(String(s).replace('%','').replace(',','.'));
+                    let stanine = parseInt(st); if(isNaN(stanine)) stanine = null;
+                    let date = parseFrenchDateRobust(dStr) || new Date(dStr);
+                    if (date && !isNaN(date.getTime()) && !isNaN(score)) {
+                        if (addIfUnique(t, score, stanine, date)) added++; matched = true;
+                    }
+                }
+            }
+            if(!matched) ignored++;
+        });
+        saveDB(); updateUI();
+        let logMsg = `${added} données intactes importées.`;
+        if (rescued > 0) logMsg += ` <br><span style="color:var(--success)">🩺 <strong>Sauvetage réussi :</strong> ${rescued} résultats corrompus par Excel ont été extraits et réparés !</span>`;
+        if (ignored > 0) logMsg += ` <br><span style="color:var(--text-muted)">🛡️ ${ignored} lignes Excel cassées ou vides ont été ignorées.</span>`;
+        document.getElementById('importLog').innerHTML = logMsg;
+        document.getElementById('csvFile').value = ''; 
+    };
+    reader.readAsText(file);
+});
+
+function exportCSV() {
+  const csv = Papa.unparse(DB);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8;'}));
+  a.download = `pilotest_export_${dayjs().format('YYYYMMDD')}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/**
+ * UI UPDATES & CHARTS
+ */
+function updateUI() {
+  const uniq = [...new Set([...DB.map(e => e.test), ...CATEGORIES])].sort();
+  
+  const dl = document.getElementById('testSuggestions');
+  dl.innerHTML = ''; uniq.forEach(t => { const o=document.createElement('option'); o.value=t; dl.appendChild(o); });
+
+  document.getElementById('kpiTotal').innerText = DB.length;
+  document.getElementById('kpiUnique').innerText = uniq.length;
+  
+  // KPI Moyenne Globale basée sur RECENT_LIMIT
+  let globalSum = 0;
+  let globalCount = 0;
+  const recentScoresByTest = {};
+  uniq.forEach(t => recentScoresByTest[t] = []);
+  const dbSorted = [...DB].sort((a,b) => new Date(b.date) - new Date(a.date));
+  dbSorted.forEach(r => {
+      if(RECENT_LIMIT === 0 || recentScoresByTest[r.test].length < RECENT_LIMIT) {
+          recentScoresByTest[r.test].push(r);
+          globalSum += r.score;
+          globalCount++;
+      }
+  });
+  
+  const avg = globalCount > 0 ? (globalSum / globalCount).toFixed(1) : 0;
+  document.getElementById('kpiGlobalAvg').innerText = avg+'%';
+  
+  document.getElementById('kpiStreak').innerText = calculateStreak();
+
+  renderTable(DB);
+  renderAstuces();
+  renderCategories();
+  updatePsyIndicator(); 
+
+  const sel = document.getElementById('testSelector');
+  const oldVal = sel.value;
+  sel.innerHTML = '';
+  uniq.forEach(t => { const o=document.createElement('option'); o.value=t; o.innerText=t; sel.appendChild(o); });
+  if(oldVal && uniq.includes(oldVal)) sel.value = oldVal;
+  
+  updateEtalonnageSelect();
+  updateGlobalCharts();
+  updateDetailCharts();
+  updateCoachAI();
+  
+  // Met à jour les sous-titres dynamiques
+  const labelAvg = document.getElementById('labelStatAvg');
+  if(labelAvg) labelAvg.innerText = RECENT_LIMIT > 0 ? `Moyenne (${RECENT_LIMIT} der.)` : `Moyenne Globale`;
+  
+  const subChart = document.getElementById('bottomChartSubtitle');
+  if (subChart) {
+      if (RECENT_LIMIT > 0) {
+          subChart.innerHTML = `Ce graphique affiche <strong>tous vos tests</strong>. La couleur et le numéro indiquent votre <strong>Stanine Moyenne Vraie</strong> (calculée sur vos <strong>${RECENT_LIMIT} dernières sessions</strong> pour refléter votre niveau actuel).`;
+      } else {
+          subChart.innerHTML = `Ce graphique affiche <strong>tous vos tests</strong>. La couleur et le numéro indiquent votre <strong>Stanine Moyenne Vraie</strong> (calculée sur <strong>toutes vos sessions</strong> via vos paramètres d'étalonnage).`;
+      }
+  }
+}
+
+function renderTable(dataArray) {
+  const tbody = document.querySelector('#dataTable tbody');
+  tbody.innerHTML = '';
+  const displayData = dataArray.length > 100 && document.getElementById('tableSearch').value === '' ? dataArray.slice(0, 100) : dataArray;
+  displayData.forEach((r, i) => {
+    let trend = '<span style="color:var(--text-muted)">-</span>';
+    const prev = dataArray.slice(i+1).find(x => x.test === r.test);
+    if(prev) {
+      if(r.score > prev.score) trend = '<span style="color:var(--success)">➚</span>';
+      else if(r.score < prev.score) trend = '<span style="color:var(--danger)">➘</span>';
+    }
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:var(--text-muted); font-family:monospace">${dayjs(r.date).format('DD/MM/YY')}</td>
+      <td style="font-weight:600">${r.test}</td>
+      <td>${r.score}%</td>
+      <td style="text-align:center">${trend}</td>
+      <td>${r.stanine ? `<span class="badge badge-green">St ${r.stanine}</span>` : '<span class="badge badge-gray">-</span>'}</td>
+      <td><button class="btn btn-ghost" style="padding:4px; height:auto" onclick="deleteEntry('${r.id}')"><i class="ph ph-trash"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function filterTable() {
+    const term = document.getElementById('tableSearch').value.toLowerCase();
+    const filtered = DB.filter(item => item.test.toLowerCase().includes(term));
+    renderTable(filtered);
+}
+
+function calculateStreak() {
+  if (DB.length === 0) return 0;
+  const uniqueDates = [...new Set(DB.map(d => dayjs(d.date).format('YYYY-MM-DD')))].sort().reverse();
+  if (uniqueDates.length === 0) return 0;
+  const today = dayjs().format('YYYY-MM-DD');
+  const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+  if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) return 0;
+  let streak = 1; let currentCheck = uniqueDates[0];
+  for (let i = 1; i < uniqueDates.length; i++) {
+    const prevDate = dayjs(uniqueDates[i]); const currDate = dayjs(currentCheck);
+    if (currDate.diff(prevDate, 'day') === 1) { streak++; currentCheck = uniqueDates[i]; } else { break; }
+  }
+  return streak;
+}
+
+function updateCoachAI() {
+  const titleEl = document.getElementById('coachRecommendation');
+  const reasonEl = document.getElementById('coachReason');
+  const quotes = ["La persévérance est la clé du succès.", "Chaque entraînement vous rapproche du but."];
+  if (DB.length < 3) { titleEl.innerText = "Bienvenue !"; reasonEl.innerText = quotes[Math.floor(Math.random() * quotes.length)]; return; }
+
+  const stats = {}; const now = dayjs();
+  const dbSorted = [...DB].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  dbSorted.forEach(r => {
+    if (!stats[r.test]) { stats[r.test] = { name: r.test, count: 0, sum: 0, scores: [], lastDate: dayjs(r.date), totalCount: 0 }; }
+    stats[r.test].totalCount++;
+    if (RECENT_LIMIT === 0 || stats[r.test].count < RECENT_LIMIT) {
+        stats[r.test].count++; 
+        stats[r.test].sum += r.score; 
+        stats[r.test].scores.push(r.score);
+    }
+    const d = dayjs(r.date); if (d.isAfter(stats[r.test].lastDate)) stats[r.test].lastDate = d;
+  });
+
+  const tests = Object.values(stats);
+  let recommended = null; let reason = "";
+  const oldTests = tests.filter(t => t.totalCount > 1 && now.diff(t.lastDate, 'day') > 7);
+  if (oldTests.length > 0) { oldTests.sort((a,b) => a.lastDate - b.lastDate); recommended = oldTests[0]; reason = `📅 Pas pratiqué depuis ${now.diff(recommended.lastDate, 'day')} jours.`; }
+  
+  if (!recommended) {
+    tests.forEach(t => t.avg = t.count > 0 ? t.sum / t.count : 0);
+    const weakTests = tests.filter(t => t.totalCount >= 2).sort((a,b) => a.avg - b.avg);
+    if (weakTests.length > 0) { recommended = weakTests[0]; reason = `📉 Moyenne actuelle faible (${recommended.avg.toFixed(1)}%).`; }
+  }
+  if (recommended) {
+    titleEl.innerText = `Focus : ${recommended.name}`; reasonEl.innerText = reason;
+    const sel = document.getElementById('testSelector');
+    if(sel.value !== recommended.name) { setTimeout(() => { sel.value = recommended.name; updateDetailCharts(); }, 100); }
+  }
+}
+
+function getStandardDeviation(array) {
+  if (array.length < 2) return 0;
+  const n = array.length; const mean = array.reduce((a, b) => a + b) / n;
+  return Math.sqrt(array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
+}
+
+function getChartColors() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    return { text: isDark ? '#94a3b8' : '#64748b', grid: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', primary: '#4f46e5', success: '#10b981', danger: '#ef4444', warning: '#f59e0b' };
+}
+
+function updateGlobalCharts() {
+  const cols = getChartColors();
+  const allUniqFreq = [...new Set([...DB.map(e => e.test), ...CATEGORIES])].sort();
+  
+  // Dictionnaire universel des couleurs pour les Stanines
+  const stColorsMap = {
+      1: '#ef4444', // Rouge
+      2: '#ea580c', // Orange foncé
+      3: '#f97316', // Orange clair
+      4: '#eab308', // Jaune foncé
+      5: '#fde047', // Jaune clair
+      6: '#84cc16', // Vert jaune
+      7: '#10b981', // Vert
+      8: '#0ea5e9', // Bleu clair
+      9: '#3b82f6'  // Bleu foncé
+  };
+  
+  if(DB.length) {
+      const dailyStats = {};
+      DB.forEach(r => {
+        const d = dayjs(r.date).format('YYYY-MM-DD');
+        if(!dailyStats[d]) dailyStats[d] = { sum: 0, count: 0 };
+        dailyStats[d].sum += r.score;
+        dailyStats[d].count++;
+      });
+      
+      const sortedDays = Object.keys(dailyStats).sort();
+      const globalLabels = sortedDays.map(d => dayjs(d).format('DD/MM/YY'));
+      const globalScores = sortedDays.map(d => parseFloat((dailyStats[d].sum / dailyStats[d].count).toFixed(1)));
+
+      const nG = globalScores.length;
+      let globalTrend = [];
+      if (nG > 1) {
+        let sx=0, sy=0, sxy=0, sxx=0;
+        globalScores.forEach((s, i) => { sx+=i; sy+=s; sxy+=i*s; sxx+=i*i; });
+        const m = (nG*sxy - sx*sy)/(nG*sxx - sx*sx); const b = (sy - m*sx)/nG;
+        globalTrend = globalScores.map((_, i) => m*i+b);
+      }
+
+      const ctxG = document.getElementById('globalTrendChart');
+      if(ctxG) {
+        if(chartInstances.globalTrend) chartInstances.globalTrend.destroy();
+        chartInstances.globalTrend = new Chart(ctxG, {
+          type: 'line',
+          data: {
+            labels: globalLabels,
+            datasets: [
+              { label:'Moyenne journalière', data:globalScores, borderColor:cols.primary, backgroundColor:'rgba(79, 70, 229, 0.1)', fill:true, tension:0.3 },
+              { label:'Tendance globale', data:globalTrend, borderColor:cols.danger, borderDash:[4,4], pointRadius:0, borderWidth:2 }
+            ]
+          },
+          options: { 
+            responsive:true, maintainAspectRatio:false, 
+            scales:{ y:{beginAtZero:true, max:100, grid:{color:cols.grid}, ticks:{color:cols.text}}, x:{grid:{display:false}, ticks:{color:cols.text}} },
+            interaction: { intersect: false, mode: 'index' }, plugins: { legend: { display:false } }
+          }
+        });
+      }
+
+      // Bar Chart Top 10 (Base sur la limite récente)
+      const recentScoresByTest = {};
+      allUniqFreq.forEach(t => recentScoresByTest[t] = []);
+      const dbSorted = [...DB].sort((a,b) => new Date(b.date) - new Date(a.date));
+      dbSorted.forEach(r => {
+          if(RECENT_LIMIT === 0 || recentScoresByTest[r.test].length < RECENT_LIMIT) {
+              recentScoresByTest[r.test].push(r);
+          }
+      });
+
+      const sums={};
+      const dbCounts={};
+      for(let t in recentScoresByTest) {
+          sums[t] = 0;
+          dbCounts[t] = recentScoresByTest[t].length;
+          recentScoresByTest[t].forEach(r => sums[t] += r.score);
+      }
+
+      const topLabs = Object.keys(dbCounts).filter(l => dbCounts[l] > 0);
+      const sorted = topLabs.map(l=>({l, v:(sums[l]/dbCounts[l])})).sort((a,b)=>b.v-a.v).slice(0,10);
+      
+      // Top 10 Colors based on True Stanine
+      const barColors = sorted.map(item => {
+          const testName = item.l;
+          let stSum = 0; let stCount = 0;
+          recentScoresByTest[testName].forEach(r => {
+              let st = getClassForScore(r.score, ETALONNAGE[testName] || {});
+              if(st === "< 1") st = 1;
+              if(!st && r.stanine) st = r.stanine;
+              if(st) { stSum += parseInt(st); stCount++; }
+          });
+          let avgStanine = stCount > 0 ? Math.round(stSum / stCount) : null;
+          return avgStanine ? stColorsMap[avgStanine] : 'rgba(148, 163, 184, 0.5)';
+      });
+
+      const ctxB = document.getElementById('avgBarChart');
+      if(chartInstances.bar) chartInstances.bar.destroy();
+      chartInstances.bar = new Chart(ctxB, {
+        type: 'bar',
+        data: { labels: sorted.map(x=>x.l), datasets:[{ label:'Moyenne %', data:sorted.map(x=>x.v), backgroundColor: barColors, borderRadius:6 }] },
+        options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{max:100, grid:{color:cols.grid}, ticks:{color:cols.text}}, y:{grid:{display:false}, ticks:{color:cols.text}} }, plugins:{legend:{display:false}} }
+      });
+  }
+
+  // --- DIAGRAMME REPARTITION EN CARRES (MOSAÏQUE / TREEMAP) ---
+  const counts = {};
+  allUniqFreq.forEach(t => counts[t] = 0);
+  DB.forEach(r => { counts[r.test]++; });
+  
+  const distData = allUniqFreq.map(l => ({ label: l, value: counts[l] })).sort((a,b) => b.value - a.value);
+  const distContainer = document.getElementById('squareDistribution');
+  const distLegend = document.getElementById('squareLegend');
+
+  if(distContainer && distLegend) {
+      distContainer.innerHTML = '';
+      distLegend.innerHTML = '';
+      
+      const colors = ['#4f46e5','#3b82f6','#10b981','#f59e0b','#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f43f5e', '#06b6d4', '#d946ef', '#84cc16', '#6366f1', '#eab308', '#f97316'];
+
+      distData.forEach((d, i) => {
+           d.color = colors[allUniqFreq.indexOf(d.label) % colors.length];
+      });
+
+      distData.forEach((d) => {
+          const legItem = document.createElement('div');
+          legItem.style.display = 'flex';
+          legItem.style.alignItems = 'center';
+          legItem.style.gap = '4px';
+          legItem.style.padding = '2px 6px';
+          legItem.style.borderRadius = '4px';
+          legItem.style.background = 'var(--bg-body)';
+          legItem.innerHTML = `<span style="width:10px;height:10px;background:${d.value === 0 ? 'var(--text-muted)' : d.color};border-radius:2px; opacity:${d.value===0?'0.5':'1'}"></span> <span style="color:var(--text-main); font-weight:500;">${d.label}</span> <span style="color:var(--text-muted)">(${d.value})</span>`;
+          distLegend.appendChild(legItem);
+      });
+
+      const nominalValue = Math.max(0.5, distData.reduce((sum, d)=>sum+d.value, 0) * 0.03);
+      let totalWeight = distData.reduce((sum, d) => sum + (d.value === 0 ? nominalValue : d.value), 0);
+
+      let x = 0, y = 0, w = 100, h = 100;
+      const rect = distContainer.getBoundingClientRect();
+      const cWidth = rect.width || 400;
+      const cHeight = rect.height || 220;
+
+      distData.forEach(d => {
+          const val = d.value === 0 ? nominalValue : d.value;
+          const ratio = totalWeight > 0 ? val / totalWeight : 0;
+
+          const pxW = (w / 100) * cWidth;
+          const pxH = (h / 100) * cHeight;
+
+          let chunkXPct = 0, chunkYPct = 0, chunkWPct = 0, chunkHPct = 0;
+
+          if (pxW > pxH) { 
+              chunkWPct = w * ratio;
+              chunkHPct = h;
+              chunkXPct = x;
+              chunkYPct = y;
+              x += chunkWPct;
+              w -= chunkWPct;
+          } else { 
+              chunkWPct = w;
+              chunkHPct = h * ratio;
+              chunkXPct = x;
+              chunkYPct = y;
+              y += chunkHPct;
+              h -= chunkHPct;
+          }
+          totalWeight -= val;
+
+          const box = document.createElement('div');
+          box.style.position = 'absolute';
+          box.style.left = chunkXPct + '%';
+          box.style.top = chunkYPct + '%';
+          box.style.width = chunkWPct + '%';
+          box.style.height = chunkHPct + '%';
+          box.style.backgroundColor = d.value === 0 ? 'var(--border)' : d.color;
+          box.style.opacity = d.value === 0 ? '0.3' : '1';
+          box.style.border = '1px solid var(--bg-card)';
+          box.style.boxSizing = 'border-box';
+          box.style.overflow = 'hidden';
+          box.style.display = 'flex';
+          box.style.flexDirection = 'column';
+          box.style.alignItems = 'center';
+          box.style.justifyContent = 'center';
+          box.style.color = '#fff';
+          box.style.padding = '4px';
+          box.style.transition = '0.2s';
+          box.style.cursor = 'default';
+          box.title = `${d.label}: ${d.value} tests`;
+
+          if (d.value !== 0 && chunkWPct > 8 && chunkHPct > 15) {
+             box.innerHTML = `<span style="font-size:11px; font-weight:600; text-align:center; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.2;">${d.label}</span>
+                              <span style="font-size:14px; font-weight:800; margin-top:2px;">${d.value}</span>`;
+          }
+
+          box.onmouseenter = () => { box.style.filter = 'brightness(1.1)'; box.style.zIndex = '2'; };
+          box.onmouseleave = () => { box.style.filter = 'brightness(1)'; box.style.zIndex = '1'; };
+
+          distContainer.appendChild(box);
+      });
+  }
+
+  // --- DIAGRAMME EN BARRES (FREQUENCE ET STANINE VRAIE SUR LA LIMITE RECENTE) ---
+  const freqStats = {};
+  allUniqFreq.forEach(t => freqStats[t] = { totalCount: 0, stSum: 0, stValidCount: 0 });
+
+  const dbSorted = [...DB].sort((a,b) => new Date(b.date) - new Date(a.date));
+  
+  dbSorted.forEach(r => {
+      if(freqStats[r.test]) {
+          freqStats[r.test].totalCount++;
+          
+          if(RECENT_LIMIT === 0 || freqStats[r.test].stValidCount < RECENT_LIMIT) {
+              let st = getClassForScore(r.score, ETALONNAGE[r.test] || {});
+              if(st === "< 1") st = 1;
+              if(!st && r.stanine) st = r.stanine;
+              
+              if(st) {
+                  freqStats[r.test].stSum += parseInt(st);
+                  freqStats[r.test].stValidCount++;
+              }
+          }
+      }
+  });
+
+  const freqData = allUniqFreq.map(t => {
+      const stat = freqStats[t];
+      let avgStanine = null;
+      if (stat.stValidCount > 0) {
+          avgStanine = Math.round(stat.stSum / stat.stValidCount);
+      }
+      return { label: t, count: stat.totalCount, stanine: avgStanine };
+  }).sort((a,b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.label.localeCompare(b.label);
+  });
+
+  const freqLabels = freqData.map(d => d.label);
+  const freqCounts = freqData.map(d => d.count);
+  const freqBgColors = freqData.map(d => d.stanine ? stColorsMap[d.stanine] || 'rgba(148, 163, 184, 0.5)' : 'rgba(148, 163, 184, 0.5)');
+  const freqStanines = freqData.map(d => d.stanine);
+
+  const containerFreq = document.getElementById('freqChartContainer');
+  if(containerFreq) {
+      containerFreq.style.minWidth = `max(100%, ${freqLabels.length * 35}px)`;
+  }
+
+  const ctxF = document.getElementById('freqBarChart');
+  if(ctxF) {
+      if(chartInstances.freq) chartInstances.freq.destroy();
+      chartInstances.freq = new Chart(ctxF, {
+          type: 'bar',
+          data: {
+              labels: freqLabels,
+              datasets: [{
+                  label: 'Nombre de sessions',
+                  data: freqCounts,
+                  backgroundColor: freqBgColors,
+                  borderRadius: 4
+              }],
+              customStanines: freqStanines
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                  y: { beginAtZero: true, grid: { color: cols.grid }, ticks: { color: cols.text, stepSize: 1 } },
+                  x: { 
+                      grid: { display: false }, 
+                      ticks: { color: cols.text, font: { size: 10 }, autoSkip: false, maxRotation: 90, minRotation: 45 } 
+                  }
+              },
+              plugins: { 
+                  legend: { display: false },
+                  tooltip: {
+                      callbacks: {
+                          label: function(context) {
+                              const st = context.chart.data.customStanines[context.dataIndex];
+                              return `Sessions: ${context.parsed.y} | Stanine Moy. : ${st ? st : 'Non étalonné'}`;
+                          }
+                      }
+                  }
+              }
+          },
+          plugins: [{
+              id: 'stanineLabels',
+              afterDraw: chart => {
+                  const ctx = chart.ctx;
+                  ctx.save();
+                  ctx.textAlign = 'center';
+                  ctx.textBaseline = 'bottom';
+                  ctx.font = 'bold 10px "Plus Jakarta Sans", sans-serif';
+                  
+                  chart.data.datasets.forEach((dataset, i) => {
+                      const meta = chart.getDatasetMeta(i);
+                      meta.data.forEach((bar, index) => {
+                          const stanine = chart.data.customStanines[index];
+                          if(stanine && chart.data.labels[index]) {
+                              if(bar.height > 20) {
+                                  ctx.fillStyle = [4, 5].includes(stanine) ? '#1e293b' : '#ffffff';
+                                  ctx.fillText("St." + stanine, bar.x, bar.base - 5);
+                              } else {
+                                  ctx.fillStyle = cols.text;
+                                  ctx.fillText("St." + stanine, bar.x, bar.y - 5);
+                              }
+                          }
+                      });
+                  });
+                  ctx.restore();
+              }
+          }]
+      });
+  }
+}
+
+function updateDetailCharts() {
+  const name = document.getElementById('testSelector').value;
+  const data = DB.filter(d=>d.test===name).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  
+  const etaBlock = document.getElementById('etalonnageFeedback');
+  
+  if(!data.length) {
+    if(chartInstances.line) chartInstances.line.destroy();
+    if(chartInstances.stan) chartInstances.stan.destroy();
+    document.getElementById('statAvg').innerText = '—';
+    document.getElementById('statMax').innerText = '—';
+    document.getElementById('statLast').innerText = '—';
+    document.getElementById('statSD').innerText = '—';
+    etaBlock.style.display = 'none';
+    return;
+  }
+  
+  // Limite Récente
+  let recentData = data;
+  if(RECENT_LIMIT > 0 && data.length > RECENT_LIMIT) {
+      recentData = data.slice(-RECENT_LIMIT);
+  }
+  
+  const cols = getChartColors();
+  
+  const recentScores = recentData.map(d=>d.score);
+  const avgNum = (recentScores.reduce((a,b)=>a+b,0)/recentScores.length);
+  const avg = avgNum.toFixed(1);
+  const sd = getStandardDeviation(recentScores).toFixed(1);
+  
+  // Record reste absolu (sur toutes les sessions)
+  const maxScore = Math.max(...data.map(d=>d.score));
+  
+  document.getElementById('statAvg').innerText = avg+'%';
+  document.getElementById('statMax').innerText = maxScore+'%';
+  document.getElementById('statLast').innerText = scores = data[data.length-1].score + '%';
+  const sdEl = document.getElementById('statSD');
+  sdEl.innerText = `± ${sd}`;
+  sdEl.style.color = sd>15 ? cols.danger : (sd<5 ? cols.success : '#f59e0b');
+
+  const thresholds = ETALONNAGE[name];
+  let dsLines = []; 
+
+  if (thresholds && Object.keys(thresholds).length > 0) {
+      etaBlock.style.display = 'block';
+      
+      // Stanine Moyenne Vraie (calculée sur chaque session récente)
+      let trueStSum = 0;
+      let trueStCount = 0;
+      recentData.forEach(r => {
+          let st = getClassForScore(r.score, thresholds);
+          if (st === "< 1") st = 1;
+          if (!st && r.stanine) st = r.stanine;
+          if (st) { trueStSum += parseInt(st); trueStCount++; }
+      });
+      
+      let avgClass = trueStCount > 0 ? Math.round(trueStSum / trueStCount) : getClassForScore(avgNum, thresholds);
+      if (avgClass === "< 1") avgClass = 1;
+      
+      const maxClass = getClassForScore(maxScore, thresholds);
+      
+      document.getElementById('etaAvgClass').innerHTML = `<span class="badge badge-primary" style="font-size:16px">Cl. ${avgClass}</span>`;
+      document.getElementById('etaMaxClass').innerHTML = `<span class="badge badge-green" style="font-size:16px">Cl. ${maxClass}</span>`;
+      
+      const numClass = parseInt(avgClass) || 1;
+      let nextClass = numClass < 9 ? numClass + 1 : 9;
+      let nextTarget = thresholds[nextClass];
+      
+      while(nextTarget === undefined && nextClass <= 9) {
+          nextClass++;
+          nextTarget = thresholds[nextClass];
+      }
+      
+      if (nextTarget !== undefined && numClass < 9) {
+          const currentThresh = thresholds[numClass] || 0;
+          const range = nextTarget - currentThresh;
+          const progress = avgNum - currentThresh;
+          let pct = Math.max(0, Math.min(100, (progress / range) * 100));
+          
+          document.getElementById('etaProgress').style.width = pct + '%';
+          document.getElementById('etaProgress').style.background = 'var(--primary)';
+          document.getElementById('etaNextTarget').innerText = `Prochain palier (Cl. ${nextClass}) : ${nextTarget}%`;
+      } else {
+          document.getElementById('etaProgress').style.width = '100%';
+          document.getElementById('etaProgress').style.background = 'var(--success)';
+          document.getElementById('etaNextTarget').innerText = `Objectif Maximum Atteint !`;
+      }
+
+      [4, 6, 8].forEach(c => {
+         if (thresholds[c] !== undefined) {
+             const cColor = c <= 4 ? cols.danger : (c <= 6 ? cols.warning : cols.success);
+             dsLines.push({
+                 label: `Seuil Cl. ${c}`,
+                 data: Array(data.length).fill(thresholds[c]), // Ligne s'étend sur tout le graphe complet
+                 borderColor: cColor,
+                 borderWidth: 1.5,
+                 borderDash: [5, 5],
+                 pointRadius: 0,
+                 fill: false
+             });
+         }
+      });
+  } else {
+      etaBlock.style.display = 'none';
+  }
+
+  // Le graphique de ligne montre TOUTE L'HISTOIRE pour la visualisation
+  const ctxL = document.getElementById('scoreChart');
+  if(chartInstances.line) chartInstances.line.destroy();
+  
+  const fullScores = data.map(d=>d.score);
+  const n=data.length; let trend=[];
+  if(n>1) {
+    let sx=0, sy=0, sxy=0, sxx=0;
+    data.forEach((d,i)=>{ sx+=i; sy+=d.score; sxy+=i*d.score; sxx+=i*i; });
+    const m = (n*sxy - sx*sy)/(n*sxx - sx*sx); const b = (sy - m*sx)/n;
+    trend = data.map((_,i)=>m*i+b);
+  }
+
+  const chartDatasets = [
+    { label:'Score', data:fullScores, borderColor:cols.primary, backgroundColor: 'rgba(79, 70, 229, 0.1)', fill:true, tension:0.3 },
+    { label:'Tendance', data:trend, borderColor:cols.danger, borderDash:[4,4], pointRadius:0, borderWidth:2 },
+    ...dsLines
+  ];
+
+  chartInstances.line = new Chart(ctxL, {
+    type: 'line',
+    data: {
+      labels: data.map(d=>dayjs(d.date).format('DD/MM')),
+      datasets: chartDatasets
+    },
+    options: { 
+      responsive:true, maintainAspectRatio:false, 
+      scales:{ y:{beginAtZero:true, max:100, grid:{color:cols.grid}, ticks:{color:cols.text}}, x:{grid:{display:false}, ticks:{color:cols.text}} }, 
+      interaction: { intersect: false, mode: 'index' }, 
+      plugins: { legend: { display:false } } 
+    }
+  });
+
+  const ctxS = document.getElementById('stanineChart');
+  const sC = Array(9).fill(0); 
+  // Graphe stanine seulement sur les récentes
+  recentData.forEach(d=>{
+      let st = getClassForScore(d.score, thresholds);
+      if (st === "< 1") st = 1;
+      if (!st && d.stanine) st = d.stanine;
+      if (st) sC[st-1]++;
+  });
+  
+  if(chartInstances.stan) chartInstances.stan.destroy();
+  chartInstances.stan = new Chart(ctxS, {
+    type: 'bar',
+    data: { labels:[1,2,3,4,5,6,7,8,9], datasets:[{ data:sC, backgroundColor:sC.map((_,i)=>i>5?cols.success:(i>2?cols.primary:cols.danger)), borderRadius:4 }] },
+    options: { responsive:true, maintainAspectRatio:false, scales:{y:{display:false}, x:{grid:{display:false}, ticks:{color:cols.text}}}, plugins:{legend:{display:false}} }
+  });
+}
+init();
+</script>
+</body>
+</html>
